@@ -125,6 +125,9 @@ public class SchedulerServiceImpl implements Scheduler {
             job.callAboutToBeDequeued(this);
             blockedQueue.remove(job);
             workQueue.remove(job);
+            
+            stats.removeWaitingJob(job.getClass().toString());
+            stats.decTotalJobs();
         }
         if (logger != null) {
             logger.warn("SchedulerServiceImpl: job " + job.toString()
