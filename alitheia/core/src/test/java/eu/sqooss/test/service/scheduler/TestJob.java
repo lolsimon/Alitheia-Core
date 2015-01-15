@@ -33,6 +33,7 @@
 
 package eu.sqooss.test.service.scheduler;
 
+import eu.sqooss.service.db.DBService;
 import eu.sqooss.service.scheduler.Job;
 
 /**
@@ -50,7 +51,8 @@ class TestJob extends Job
     /**
      * Contructor creating a job printing string \a s \a n times.
      */
-    public TestJob(int n, String s) {
+    public TestJob(int n, String s, DBService dbs) {
+    	super(dbs);
         this.n = n;
         this.s = s;
     }
@@ -62,7 +64,6 @@ class TestJob extends Job
     protected void run() throws Exception {
         System.out.println("Testjob running!");
         for (int i = 0; i < n; ++i) {   
-            Thread.sleep(500);
             System.out.println(s);
         }
         System.out.println("Testjob finished!");

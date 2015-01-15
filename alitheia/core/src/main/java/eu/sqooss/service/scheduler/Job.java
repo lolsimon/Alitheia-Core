@@ -101,6 +101,8 @@ public abstract class Job implements Comparable<Job> {
     
     private ResumePoint resumePoint;
     
+    private DBService dbs;
+    
     public void setWorkerThread(WorkerThread worker) {
     	m_worker = worker;
      }
@@ -215,7 +217,6 @@ public abstract class Job implements Comparable<Job> {
      * @throws Exception
      */
     final public long execute() throws Exception {
-        DBService dbs = AlitheiaCore.getInstance().getDBService();
         long timer = System.currentTimeMillis();
         try {
             setState(State.Running);
@@ -374,10 +375,21 @@ public abstract class Job implements Comparable<Job> {
     /**
      * Protected default constructor.
      */
-    protected Job() {
+    protected Job() {        
+    	this(AlitheiaCore.getInstance().getDBService());
+    }
+    
+    /**
+     * Alternative constructor, allows injecting your
+     * own DBService
+     */
+    protected Job(DBService dbs)
+    {
         m_scheduler = null;
         m_errorException = null;
         setState( State.Created );
+    	
+        this.dbs = dbs;    	
     }
 
     /**
@@ -493,7 +505,6 @@ public abstract class Job implements Comparable<Job> {
     
     public long resume() throws Exception {
         long ts = System.currentTimeMillis();
-        DBService dbs = AlitheiaCore.getInstance().getDBService();
 
         if (state() != State.Yielded)
             throw new SchedulerException("Cannot resume a non-yielded job");

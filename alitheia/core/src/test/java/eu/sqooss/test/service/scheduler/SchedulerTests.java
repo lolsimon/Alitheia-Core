@@ -4,7 +4,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import eu.sqooss.impl.service.db.DBServiceImpl;
 import eu.sqooss.impl.service.scheduler.SchedulerServiceImpl;
+import eu.sqooss.service.db.DBService;
 import eu.sqooss.service.scheduler.SchedulerException;
 
 public class SchedulerTests {
@@ -13,22 +15,24 @@ public class SchedulerTests {
     
     @BeforeClass
     public static void setUp() {
-        sched = new SchedulerServiceImpl();
+    	sched = new SchedulerServiceImpl();
         sched.startExecute(2);
     }
 
     @Test
     public void testJobYield() throws SchedulerException {
+
+        DBService dbs = DBServiceImpl.getInstance();
         
-        TestJob j1 = new TestJob(20, "Test");
+        TestJob j1 = new TestJob(1, "Job 1", dbs);
         sched.enqueue(j1);
-        TestJob j2 = new TestJob(20, "Test");
+        TestJob j2 = new TestJob(2, "Job 2", dbs);
         sched.enqueue(j2);
-        TestJob j3 = new TestJob(20, "Test");
+        TestJob j3 = new TestJob(3, "Job 3", dbs);
         sched.enqueue(j3);
-        TestJob j4 = new TestJob(20, "Test");
+        TestJob j4 = new TestJob(4, "Job 4", dbs);
         sched.enqueue(j4);
-    }
+}
     
     @AfterClass
     public static void tearDown() {
