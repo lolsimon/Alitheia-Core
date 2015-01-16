@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.lang.Comparable;
@@ -46,8 +45,8 @@ import java.lang.InterruptedException;
 
 import eu.sqooss.core.AlitheiaCore;
 import eu.sqooss.service.util.Pair;
-
 import eu.sqooss.service.db.DBService;
+import eu.sqooss.service.logging.Logger;
 import eu.sqooss.service.scheduler.SchedulerException;
 
 /**
@@ -107,6 +106,9 @@ public abstract class Job implements Comparable<Job>, Callable<Void> {
     
     public Future<Void> future;
     
+    private static final String PERF_LOG_PROPERTY = "eu.sqooss.log.perf";
+    private boolean perfLog = false;
+
     public void setWorkerThread(WorkerThread worker) {
     	m_worker = worker;
      }
@@ -384,10 +386,15 @@ public abstract class Job implements Comparable<Job>, Callable<Void> {
     }
     
     /**
-     * Alternative constructor, allows dependency injection
+     * Constructor allowing dependency injection
      */
     protected Job(DBService dbs)
     {
+        String perfLog = System.getProperty(PERF_LOG_PROPERTY);
+        if (perfLog != null && perfLog.equals("true")) {
+            this.perfLog = true;
+        }
+
         m_scheduler = null;
         m_errorException = null;
         setState( State.Created );
@@ -493,7 +500,29 @@ public abstract class Job implements Comparable<Job>, Callable<Void> {
      */
     public Void call() throws Exception
     {
-    	this.run();
+		//Job oldJob = m_job;
+		long time = -1;
+		try {
+			//m_job = j;
+			if (this.state() == Job.State.Yielded) {
+			    time = this.resume();
+			} else { 
+			    time = this.execute();
+			}
+		} catch (ClassCastException cce) { 
+		    AlitheiaCore.getInstance().getLogManager().createLogger(
+		            Logger.NAME_SQOOSS_SCHEDULING).error("Job " + this + " is not resumable");
+		} catch (Exception e) {
+			throw e;
+		} finally {
+		    if (perfLog) {
+		        AlitheiaCore.getInstance().getLogManager().
+		            createLogger("sqooss.jobtimer").
+		            debug(this.toString() + ", time: " + time + " ms");
+		    }
+			//m_job = oldJob;
+		}
+
     	return null;
     }
 
