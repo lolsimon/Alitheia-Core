@@ -74,6 +74,8 @@ public class SchedulerServiceImpl implements Scheduler {
 
     private List<WorkerThread> myWorkerThreads = null;
     
+    private boolean isExecuting = false;
+    
     public SchedulerServiceImpl() { }
 
     public void enqueue(Job job) throws SchedulerException {
@@ -247,6 +249,7 @@ public class SchedulerServiceImpl implements Scheduler {
             Future<Void> future = executorService.submit(job); 
             job.future = future;
         }
+        isExecuting = true;
     }
 
     public void stopExecute() {
@@ -266,16 +269,18 @@ public class SchedulerServiceImpl implements Scheduler {
         */
     	
     	frozenJobs = executorService.shutdownNow();
+        isExecuting = false;
     }
 
     synchronized public boolean isExecuting() {
-        synchronized (this) {
+        /*synchronized (this) {
             if (myWorkerThreads == null) {
                 return false;
             } else {
                 return !myWorkerThreads.isEmpty();
             }
-        }
+        }*/
+        return isExecuting; 
     }
 
     public SchedulerStats getSchedulerStats() {

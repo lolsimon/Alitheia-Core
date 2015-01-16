@@ -170,9 +170,11 @@ public class SchedulerTest {
     }
     
     @Test
-    public void testStartup()
+    public void IsExecutingTest() //tests wheter the isExecuting boolean is standard false
     {
-        
+        Assert.assertTrue(sched.isExecuting());
+        sched.stopExecute();
+        Assert.assertFalse(sched.isExecuting());
     }
 
     //@Test
