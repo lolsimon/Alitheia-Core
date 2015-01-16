@@ -329,9 +329,12 @@ public abstract class Job implements Comparable<Job>, Callable<Void> {
         } catch (Exception e) {
             // if something went wrong with taking the job
             // ok - we might be stuck...
+        	/*
             if (m_scheduler.getSchedulerStats().getIdleWorkerThreads() == 0) {
                 m_scheduler.startOneShotWorkerThread();
             }
+            */
+            e.printStackTrace();
         }
         synchronized (this) {
             while (state() != State.Finished) {

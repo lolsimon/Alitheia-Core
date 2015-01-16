@@ -292,8 +292,8 @@ public class SchedulerServiceImpl implements Scheduler {
     }
 
     public void startOneShotWorkerThread() {
-        WorkerThread t = new WorkerThreadImpl(this, true);
-        t.start();
+        //WorkerThread t = new WorkerThreadImpl(this, true);
+        //t.start();
     }
 
 	@Override
