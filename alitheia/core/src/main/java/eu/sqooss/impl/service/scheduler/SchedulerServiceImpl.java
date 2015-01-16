@@ -91,7 +91,8 @@ public class SchedulerServiceImpl implements Scheduler {
     public void enqueueNoDependencies(Set<Job> jobs) throws SchedulerException {
         synchronized (this) {
             for (Job job : jobs) {
-                logger.debug("Scheduler ServiceImpl: queuing job "
+                if (logger != null)
+                    logger.debug("Scheduler ServiceImpl: queuing job "
                         + job.toString());
                 job.callAboutToBeEnqueued(this);
 
@@ -109,7 +110,8 @@ public class SchedulerServiceImpl implements Scheduler {
     public void enqueueBlock(List<Job> jobs) throws SchedulerException {
         synchronized (this) {
             for (Job job : jobs) {
-                logger.debug("SchedulerServiceImpl: queuing job " + job.toString());
+                if (logger != null)
+                    logger.debug("SchedulerServiceImpl: queuing job " + job.toString());
                 job.callAboutToBeEnqueued(this);
                 blockedQueue.add(job);
                 stats.addWaitingJob(job.getClass().toString());
@@ -121,6 +123,7 @@ public class SchedulerServiceImpl implements Scheduler {
     }
 
     public void dequeue(Job job) {
+        System.out.println("HOI0");
         synchronized (this) {
             //if (!blockedQueue.contains(job) && !workQueue.contains(job)) {
             if (!blockedQueue.contains(job) && job.future == null) {
@@ -137,6 +140,7 @@ public class SchedulerServiceImpl implements Scheduler {
             	job.future.cancel(false);
             }
             
+            System.out.println("HOI1");
             stats.removeWaitingJob(job.getClass().toString());
             stats.decTotalJobs();
         }
@@ -179,6 +183,8 @@ public class SchedulerServiceImpl implements Scheduler {
             stats.removeRunJob(job);
             stats.incFinishedJobs();
         } else if (state == Job.State.Running) {
+            System.out.println("TROLLLLLLL");
+            System.out.println(job.getClass().toString());
             stats.removeWaitingJob(job.getClass().toString());
             stats.addRunJob(job);
         } else if (state == Job.State.Yielded) {
