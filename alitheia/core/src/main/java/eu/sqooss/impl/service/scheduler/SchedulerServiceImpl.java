@@ -63,8 +63,6 @@ public class SchedulerServiceImpl implements Scheduler {
     // thread safe job queue
     private PriorityQueue<Job> blockedQueue = new PriorityQueue<Job>(1,
             new JobPriorityComparator());
-    //private BlockingQueue<Job> workQueue = new PriorityBlockingQueue<Job>(1,
-    //        new JobPriorityComparator());
 
     private BlockingQueue<Job> failedQueue = new ArrayBlockingQueue<Job>(1000);
 
@@ -98,10 +96,8 @@ public class SchedulerServiceImpl implements Scheduler {
                         + job.toString());
                 job.callAboutToBeEnqueued(this);
 
-                //workQueue.add(job);
                 Future<Void> future = executorService.submit(job); 
                 job.future = future;
-                // FIXME: what about exception handling?
 
                 stats.addWaitingJob(job.getClass().toString());
                 stats.incTotalJobs();
@@ -126,7 +122,6 @@ public class SchedulerServiceImpl implements Scheduler {
 
     public void dequeue(Job job) {
         synchronized (this) {
-            //if (!blockedQueue.contains(job) && !workQueue.contains(job)) {
             if (!blockedQueue.contains(job) && job.future == null) {
                 if (logger != null) {
                     logger.info("SchedulerServiceImpl: job " + job.toString()
@@ -136,7 +131,6 @@ public class SchedulerServiceImpl implements Scheduler {
             }
             job.callAboutToBeDequeued(this);
             blockedQueue.remove(job);
-            //workQueue.remove(job);
             if (job.future != null) {
             	job.future.cancel(false);
             }
@@ -151,26 +145,10 @@ public class SchedulerServiceImpl implements Scheduler {
     }
 
     public Job takeJob() throws java.lang.InterruptedException {
-        /*
-         * no synchronize needed here, the queue is doing that adding
-         * synchronize here would actually dead-lock this, since no new items
-         * can be added as long someone is waiting for items
-         */
-        //return workQueue.take();
     	return null;
     }
 
     public Job takeJob(Job job) throws SchedulerException {
-    	/*
-        synchronized (workQueue) {
-            if (!workQueue.contains(job)) {
-                throw new SchedulerException("Can't take job " + job
-                        + ": It is not in the scheduler's queue right now.");
-            }
-            workQueue.remove(job);
-            return job;
-        }
-        */
     	return null;
     }
     
@@ -210,7 +188,6 @@ public class SchedulerServiceImpl implements Scheduler {
                 blockedQueue.remove(job);
                 Future<Void> future = executorService.submit(job);
                 job.future = future;
-                //workQueue.add(job);
             }
         }
     }
@@ -225,23 +202,6 @@ public class SchedulerServiceImpl implements Scheduler {
     }
     
     public void startExecute(int n) {
-    	/*
-        if (logger != null)
-            logger.info("Starting " + n + " worker threads");
-        synchronized (this) {
-            if (myWorkerThreads == null) {
-                myWorkerThreads = new LinkedList<WorkerThread>();
-            }
-
-            for (int i = 0; i < n; ++i) {
-                WorkerThread t = new WorkerThreadImpl(this, i);
-                t.start();
-                myWorkerThreads.add(t);
-                stats.incWorkerThreads();
-            }
-        }
-        */
-        
         executorService = Executors.newCachedThreadPool();
         for(Runnable runnable : frozenJobs)
         {
@@ -252,34 +212,12 @@ public class SchedulerServiceImpl implements Scheduler {
         isExecuting = true;
     }
 
-    public void stopExecute() {
-    	/*
-        synchronized (this) {
-            if (myWorkerThreads == null) {
-                return;
-            }
-
-            for (WorkerThread t : myWorkerThreads) {
-                t.stopProcessing();
-                stats.decWorkerThreads();
-            }
-
-            myWorkerThreads.clear();
-        }
-        */
-    	
+    public void stopExecute() {    	
     	frozenJobs = executorService.shutdownNow();
         isExecuting = false;
     }
 
     synchronized public boolean isExecuting() {
-        /*synchronized (this) {
-            if (myWorkerThreads == null) {
-                return false;
-            } else {
-                return !myWorkerThreads.isEmpty();
-            }
-        }*/
         return isExecuting; 
     }
 
@@ -297,8 +235,6 @@ public class SchedulerServiceImpl implements Scheduler {
     }
 
     public void startOneShotWorkerThread() {
-        //WorkerThread t = new WorkerThreadImpl(this, true);
-        //t.start();
     }
 
 	@Override
@@ -362,8 +298,6 @@ public class SchedulerServiceImpl implements Scheduler {
         	blockedQueue.add(j);                	
         }
 
-        //workQueue.remove(j);
-        //blockedQueue.add(j);
     }
 }
 
