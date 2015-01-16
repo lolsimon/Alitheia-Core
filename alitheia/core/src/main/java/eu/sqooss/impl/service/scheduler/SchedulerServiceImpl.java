@@ -123,7 +123,6 @@ public class SchedulerServiceImpl implements Scheduler {
     }
 
     public void dequeue(Job job) {
-        System.out.println("HOI0");
         synchronized (this) {
             //if (!blockedQueue.contains(job) && !workQueue.contains(job)) {
             if (!blockedQueue.contains(job) && job.future == null) {
@@ -140,7 +139,6 @@ public class SchedulerServiceImpl implements Scheduler {
             	job.future.cancel(false);
             }
             
-            System.out.println("HOI1");
             stats.removeWaitingJob(job.getClass().toString());
             stats.decTotalJobs();
         }
@@ -183,8 +181,6 @@ public class SchedulerServiceImpl implements Scheduler {
             stats.removeRunJob(job);
             stats.incFinishedJobs();
         } else if (state == Job.State.Running) {
-            System.out.println("TROLLLLLLL");
-            System.out.println(job.getClass().toString());
             stats.removeWaitingJob(job.getClass().toString());
             stats.addRunJob(job);
         } else if (state == Job.State.Yielded) {
