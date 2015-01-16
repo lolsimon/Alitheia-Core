@@ -9,7 +9,9 @@ import eu.sqooss.impl.service.scheduler.SchedulerServiceImpl;
 import eu.sqooss.service.db.DBService;
 import eu.sqooss.service.scheduler.Job;
 import eu.sqooss.service.scheduler.SchedulerException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.After;
 import org.junit.Assert;
@@ -78,7 +80,6 @@ public class SchedulerTests {
         Assert.assertEquals(Job.State.Queued, j1.state());
         sched.dequeue(j1);
         Assert.assertEquals(Job.State.Created, j1.state());
-        sched.startExecute(2); //restart
     }
     
     @Test
@@ -101,6 +102,33 @@ public class SchedulerTests {
         sched.enqueueNoDependencies(jobs);
         Assert.assertEquals(4,sched.getSchedulerStats().getTotalJobs());
     }
+    
+    @Test
+    public void enqueueBlockTest(){
+        DBService dbs = DBServiceImpl.getInstance();
+        
+        TestJob j1 = new TestJob(1, "Job 1", dbs);
+        TestJob j2 = new TestJob(2, "Job 2", dbs);
+        TestJob j3 = new TestJob(3, "Job 3", dbs);
+        TestJob j4 = new TestJob(4, "Job 4", dbs);
+        List<Job> jobs = new ArrayList<Job>();
+        jobs.add(j1);
+        jobs.add(j2);
+        jobs.add(j3);
+        jobs.add(j4);
+        
+        try{
+            sched.enqueueBlock(jobs);
+        }
+        catch(Exception e)
+        {
+            Assert.fail();
+        }
+        Assert.assertEquals(4,sched.getSchedulerStats().getTotalJobs());
+    }
+
+    //@Test
+    //public void 
     
     @After
     public void tearDown() {
