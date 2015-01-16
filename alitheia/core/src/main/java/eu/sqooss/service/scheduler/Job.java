@@ -39,6 +39,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.lang.Comparable;
 import java.lang.InterruptedException;
 
@@ -53,7 +55,7 @@ import eu.sqooss.service.scheduler.SchedulerException;
  *
  * @author Christoph Schleifenbam
  */
-public abstract class Job implements Comparable<Job> {
+public abstract class Job implements Comparable<Job>, Callable<Void> {
 
     /**
      * The state of the job.
@@ -102,6 +104,8 @@ public abstract class Job implements Comparable<Job> {
     private ResumePoint resumePoint;
     
     private DBService dbs;
+    
+    public Future<Void> future;
     
     public void setWorkerThread(WorkerThread worker) {
     	m_worker = worker;
@@ -380,8 +384,7 @@ public abstract class Job implements Comparable<Job> {
     }
     
     /**
-     * Alternative constructor, allows injecting your
-     * own DBService
+     * Alternative constructor, allows dependency injection
      */
     protected Job(DBService dbs)
     {
@@ -482,7 +485,17 @@ public abstract class Job implements Comparable<Job> {
      * @throws Exception
      *                 If thrown, the job ends up in Error state.
      */
-    abstract protected void run() throws Exception;
+     abstract protected void run() throws Exception;
+    
+    /**
+     * Wrapper method for run(), created in order to conform to the
+     * Callable interface.
+     */
+    public Void call() throws Exception
+    {
+    	this.run();
+    	return null;
+    }
 
     /**
      * Stop execution of the job until 

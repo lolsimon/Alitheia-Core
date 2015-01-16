@@ -38,9 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.*;
 
 import org.osgi.framework.BundleContext;
 
@@ -65,10 +63,14 @@ public class SchedulerServiceImpl implements Scheduler {
     // thread safe job queue
     private PriorityQueue<Job> blockedQueue = new PriorityQueue<Job>(1,
             new JobPriorityComparator());
-    private BlockingQueue<Job> workQueue = new PriorityBlockingQueue<Job>(1,
-            new JobPriorityComparator());
+    //private BlockingQueue<Job> workQueue = new PriorityBlockingQueue<Job>(1,
+    //        new JobPriorityComparator());
 
     private BlockingQueue<Job> failedQueue = new ArrayBlockingQueue<Job>(1000);
+
+	private ExecutorService executorService;
+	
+	private List<Runnable> frozenJobs = new LinkedList<Runnable>();
 
     private List<WorkerThread> myWorkerThreads = null;
     
@@ -92,7 +94,12 @@ public class SchedulerServiceImpl implements Scheduler {
                 logger.debug("Scheduler ServiceImpl: queuing job "
                         + job.toString());
                 job.callAboutToBeEnqueued(this);
-                workQueue.add(job);
+
+                //workQueue.add(job);
+                Future<Void> future = executorService.submit(job); 
+                job.future = future;
+                // FIXME: what about exception handling?
+
                 stats.addWaitingJob(job.getClass().toString());
                 stats.incTotalJobs();
             }
@@ -115,7 +122,8 @@ public class SchedulerServiceImpl implements Scheduler {
 
     public void dequeue(Job job) {
         synchronized (this) {
-            if (!blockedQueue.contains(job) && !workQueue.contains(job)) {
+            //if (!blockedQueue.contains(job) && !workQueue.contains(job)) {
+            if (!blockedQueue.contains(job) && job.future == null) {
                 if (logger != null) {
                     logger.info("SchedulerServiceImpl: job " + job.toString()
                             + " not found in the queue.");
@@ -124,7 +132,10 @@ public class SchedulerServiceImpl implements Scheduler {
             }
             job.callAboutToBeDequeued(this);
             blockedQueue.remove(job);
-            workQueue.remove(job);
+            //workQueue.remove(job);
+            if (job.future != null) {
+            	job.future.cancel(false);
+            }
         }
         if (logger != null) {
             logger.warn("SchedulerServiceImpl: job " + job.toString()
@@ -138,10 +149,12 @@ public class SchedulerServiceImpl implements Scheduler {
          * synchronize here would actually dead-lock this, since no new items
          * can be added as long someone is waiting for items
          */
-        return workQueue.take();
+        //return workQueue.take();
+    	return null;
     }
 
     public Job takeJob(Job job) throws SchedulerException {
+    	/*
         synchronized (workQueue) {
             if (!workQueue.contains(job)) {
                 throw new SchedulerException("Can't take job " + job
@@ -150,6 +163,8 @@ public class SchedulerServiceImpl implements Scheduler {
             workQueue.remove(job);
             return job;
         }
+        */
+    	return null;
     }
     
     public void jobStateChanged(Job job, Job.State state) {
@@ -179,17 +194,31 @@ public class SchedulerServiceImpl implements Scheduler {
 
     public void jobDependenciesChanged(Job job) {
         synchronized (this) {
-            if (workQueue.contains(job) && !job.canExecute()) {
-                workQueue.remove(job);
-                blockedQueue.add(job);
+            if (jobIsQueuedForWork(job) && !job.canExecute()) {
+                if (job.future.cancel(false)) {
+                	job.future = null;
+                	blockedQueue.add(job);                	
+                }                
             } else if (job.canExecute()) {
                 blockedQueue.remove(job);
-                workQueue.add(job);
+                Future<Void> future = executorService.submit(job);
+                job.future = future;
+                //workQueue.add(job);
             }
         }
     }
 
+    /**
+     * Returns whether the job meets its dependencies and is
+     * therefore not blocked but queued for work
+     */
+    public boolean jobIsQueuedForWork(Job job)
+    {
+    	return (job.future != null && !job.future.isDone());
+    }
+    
     public void startExecute(int n) {
+    	/*
         if (logger != null)
             logger.info("Starting " + n + " worker threads");
         synchronized (this) {
@@ -204,9 +233,19 @@ public class SchedulerServiceImpl implements Scheduler {
                 stats.incWorkerThreads();
             }
         }
+        */
+        
+        executorService = Executors.newCachedThreadPool();
+        for(Runnable runnable : frozenJobs)
+        {
+        	Job job = (Job)runnable;
+            Future<Void> future = executorService.submit(job); 
+            job.future = future;
+        }
     }
 
     public void stopExecute() {
+    	/*
         synchronized (this) {
             if (myWorkerThreads == null) {
                 return;
@@ -219,6 +258,9 @@ public class SchedulerServiceImpl implements Scheduler {
 
             myWorkerThreads.clear();
         }
+        */
+    	
+    	frozenJobs = executorService.shutdownNow();
     }
 
     synchronized public boolean isExecuting() {
@@ -304,8 +346,14 @@ public class SchedulerServiceImpl implements Scheduler {
         
         if (j.state() != Job.State.Yielded)
             j.yield(p);
-        workQueue.remove(j);
-        blockedQueue.add(j);
+
+        if (jobIsQueuedForWork(j) && j.future.cancel(false)) {
+        	j.future = null;
+        	blockedQueue.add(j);                	
+        }
+
+        //workQueue.remove(j);
+        //blockedQueue.add(j);
     }
 }
 
