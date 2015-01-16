@@ -136,6 +136,9 @@ public class SchedulerServiceImpl implements Scheduler {
             if (job.future != null) {
             	job.future.cancel(false);
             }
+            
+            stats.removeWaitingJob(job.getClass().toString());
+            stats.decTotalJobs();
         }
         if (logger != null) {
             logger.warn("SchedulerServiceImpl: job " + job.toString()
